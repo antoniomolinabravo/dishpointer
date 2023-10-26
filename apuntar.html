@@ -1,0 +1,888 @@
+<html>
+<body>
+
+<form name='frm'>
+<label for="lat">Lat:</label>
+<input id='lat' name='lat' type='number' min='-99' max='99' step='0.1' value='-18.45'>
+<label for="long">Long:</label>
+<input id='long' name='long' type='number' min='-99' max='99' step='0.1' value='-70.29'>
+<label for="lines">Lineas:</label>
+<input id='lines' name='lines' type='number' min='0' max='200' step='1' value='47'>
+<input type='button' value='Calc' onclick='calcGraph()'>
+</form>
+
+
+
+<form name='frm2'>
+<label for="longS">Long Sat:</label>
+<input id='longS' name='longS' type='number' min='-99' max='99' step='0.01' value='' placeholder='-73.9'>
+<small>W:negativo / E:positivo</small>
+<label for="lines">Lineas:</label>
+<input id='nombre' name='nombre' type='text' value='' placeholder='nombre satelite'>
+<input type='button' value='Add Sat' onclick='addSat()'>
+</form>
+
+<div>Satelites</div>
+<ul id='sats'>
+  <li long='-30'>HSP 30W</li>
+  <li long='-61'>AMZ 61W</li>
+  <li long='-71.8'>AR1 71.8W</li>
+  <li long='-73.9'>HSP 74W</li>
+  <li long='-77'>QTZ 77W</li>
+  <li long='-87.1'>TPK 87W</li>
+  <li long='-92'>BRZ 92W</li>
+</ul>
+
+<script>
+function addSat() {
+ ul = document.getElementById('sats');
+// nameS = ul.childNodes[1].innerText;
+// longS = ul.childNodes[1].getAttribute('long');
+ // arrS.push(new Sat(i, longS, nameS, 0) );
+
+ li = document.createElement("li");
+ li.setAttribute('long', frm2.longS.value);
+ li.innerText = frm2.nombre.value;
+ ul.appendChild(li);
+}
+</script>
+
+
+
+    <canvas id="myCanvas"></canvas>
+
+
+<!-- /////////////////////////////// -->
+
+
+<script>
+function dishpoint(eslat, eslong, satlong) {
+  radgrad = 180 / Math.PI;  // /57.29578
+  longdiffr = (eslong-satlong)/radgrad;
+  eslatr = eslat/radgrad;
+
+  tanlong = Math.tan(longdiffr);
+  sinlat = Math.sin(eslatr);
+
+  esazimuth = 180 + radgrad * Math.atan(tanlong / sinlat);
+  if (eslat<0) esazimuth = esazimuth - 180; 
+  if (esazimuth<0) esazimuth = esazimuth + 360.0;
+//  return esazimuth;
+
+
+  radiotierra = 6378.16;
+  radioorbita = 35786;
+
+  coslong = Math.cos(longdiffr);
+  coslat = Math.cos(eslatr);
+
+  r1 = 1 + radioorbita/radiotierra;
+  v1 = r1 * coslat * coslong - 1;
+  v2 = r1 * Math.sqrt(1 - coslat * coslat * coslong * coslong);
+  eselevation = radgrad * Math.atan(v1/v2);
+  eselrefracted = eselevation;
+  if (eselevation<30)
+     eselrefracted = (eselevation + Math.sqrt(eselevation * eselevation + 4.132))/2
+//  return eselrefracted;
+
+
+  sinlong = Math.sin(longdiffr);
+  tanlat = Math.tan(eslatr);
+
+  longdiffr = (satlong-eslong)/radgrad;
+  poltilt = -1 * radgrad * Math.atan(sinlong / tanlat);
+//  return poltilt;
+
+
+  return [esazimuth, eselrefracted, poltilt];
+}
+</script>
+
+
+
+
+<script>
+function graficaAzimut(posx, posy, radio_int, radio_ext, arrSat) {
+var myCanvas = document.getElementById("myCanvas");
+var ctx = myCanvas.getContext("2d");
+var angulo = 45;
+gradrad = Math.PI/180;
+ang_corr = 90;
+angulo = (angulo + ang_corr) * gradrad; //   *3.14/180;
+//var radio_int = 120; // 60
+//var radio_ext = 140; // 70
+//var posx = 400;
+//var posy = 410;
+var ratio_int=1;
+
+      ctx.beginPath();
+      ctx.strokeStyle = 'black';
+      ctx.setLineDash([10, 10]);
+//      ctx.drawDashedLine([10, 10]);
+
+// REFERENCIA
+      //semicirculo
+      // 3.14 Math.PI
+  //    ctx.arc(posx, posy, radio_ext, (0-20)*3.14/180, (180+20)*3.14/180, true); // en sentido angulos
+
+      //pintamos el contorno del camino
+  //    ctx.stroke();
+
+angulo = (90+ang_corr) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+      ctx.moveTo(Math.sin(angulo)*(-20*ratio_int)+posx, Math.cos(angulo)*(-20*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext-20)+posx, Math.cos(angulo)*(radio_ext-20)+posy);
+
+angulo = (0+ang_corr) * gradrad; //   *3.14/180;
+      ctx.moveTo(Math.sin(angulo)*(radio_int*-1*ratio_int)+posx, Math.cos(angulo)*(radio_int*-1*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext-10)+posx, Math.cos(angulo)*(radio_ext-10)+posy);
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+
+
+ctx.save();
+angulo = 0;
+ctx.translate(posx, posy);
+ctx.rotate((angulo-90)*gradrad);
+ctx.font = "20px Arial";
+ctx.fillStyle = 'black';
+ctx.textAlign = 'left';
+ctx.fillText('NORTE', 10, 20);
+ctx.restore();
+
+
+      ctx.beginPath();
+      ctx.setLineDash([]);
+      ctx.font = "10px Arial";
+      ctx.fillStyle = "black";
+      ctx.textAlign = "center";
+      ctx.fillText('lat:'+lat+ '    long:'+long,    posx, posy+10);
+
+
+// ESCALA
+      ctx.strokeStyle = "black";
+  for(i=0+20; i<=180-20; i+=5){
+    angulo = (i+ang_corr) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+      ctx.moveTo(Math.sin(angulo)*(radio_int*ratio_int)+posx, Math.cos(angulo)*(radio_int*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*radio_ext+posx, Math.cos(angulo)*radio_ext+posy);
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+	if(i%10==0){
+      // tipo letra y textos
+      ctx.font = "10px Arial";
+      ctx.fillStyle = "black"; //sat.color;
+      ctx.textAlign = "center";
+      ctx.fillText((i-ang_corr)*-1,    Math.sin(angulo)*(radio_ext+5)+posx, Math.cos(angulo)*(radio_ext+5)+posy);
+        }
+
+    ratio_int = (ratio_int==1)?1.1:1;
+  }
+
+
+
+// SATELITES
+  radio_int = radio_ext + 15;
+  radio_ext = radio_int + 15;
+  ratio_int = 1; // (ratio_int==1)?1.1:1;
+    for(i=0; i<arrSat.length; i++){
+      sat = arrSat[i];
+
+     //if(i>base){
+      //comenzamos el camino
+      ctx.beginPath();
+      ctx.strokeStyle = sat.color;
+
+     angulo=(sat.norte*-1+180) * gradrad; //   *3.14/180;
+//    angulo=(sat.norte+90) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+     // ctx.moveTo(Math.sin(angulo)*(radio_int*ratio_int)+posx, Math.cos(angulo)*(radio_int*ratio_int)+posy);
+      ctx.moveTo(Math.sin(angulo)*radio_int+posx, Math.cos(angulo)*radio_int+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext+sat.offset*.5)+posx, Math.cos(angulo)*(radio_ext+sat.offset*.5)+posy);
+
+
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+      // tipo letra y textos
+      ctx.font = "10px Arial";
+      ctx.fillStyle = sat.color;
+      ctx.textAlign = "center";
+      if(sat.norte<-30) ctx.textAlign = "right";
+      if(sat.norte>30) ctx.textAlign = "left";
+      // ctx.fillText(sat.norte+'°', Math.sin(angulo)*(radio_ext*ratio_int)+posx, Math.cos(angulo)*(radio_ext*ratio_int)+posy);
+      // ctx.fillText(sat.nombre,    Math.sin(angulo)*(radio_ext*(ratio_int+sat.offset))+posx, Math.cos(angulo)*(radio_ext*(ratio_int+sat.offset))+posy);
+     // ctx.fillText(sat.nombre,    Math.sin(angulo)*(radio_ext+sat.offset)+posx, Math.cos(angulo)*(radio_ext+sat.offset)+posy);
+
+
+
+ctx.save();
+//ctx.translate(Math.sin(angulo)*(radio_ext)+posx, (Math.cos(angulo)*(radio_ext+(1*i*15))+posy));
+ctx.translate(Math.sin(angulo)*(radio_ext)+posx, (Math.cos(angulo)*(radio_ext)+posy));
+ctx.rotate((sat.norte-90)*gradrad); // (-sat.girolnb+0)*gradrad); // -Math.PI / 4);  sat.girolnb*3.14/180
+ctx.textAlign = 'left';
+//ctx.fillText(sat.girolnb+'° '+sat.nombre, Math.sin(angulo)*(radio_ext)+posx, (Math.cos(angulo)*(radio_ext+(1*i*15))+posy)/2);
+      diff = 0;
+      if(sat.elevacion<66) diff = 3;
+      if(sat.elevacion>68) diff = -6;
+      if(sat.elevacion<62) diff = 0;
+// ctx.fillText(sat.norte+'° '+sat.nombre, 10+sat.offset*.5, 4+diff);
+ctx.fillText(sat.nombre, 10+sat.offset*0.5, 4); // +diff
+ctx.restore();
+
+
+
+//  ratio_int = (ratio_int==1)?1.2:1;
+     //}
+    }
+}
+</script>
+
+
+
+
+<script>
+function graficaElevacion(posx, posy, radio_int, radio_ext, arrSat) {
+var myCanvas = document.getElementById("myCanvas");
+var ctx = myCanvas.getContext("2d");
+var angulo = 45;
+gradrad = Math.PI/180;
+ang_corr = 90;
+angulo = (angulo + ang_corr) * gradrad; //   *3.14/180;
+//var radio_int = 120; // 60
+//var radio_ext = 140; // 70
+//var posx = 400;
+//var posy = 410;
+var ratio_int=1;
+
+
+      ctx.beginPath();
+      ctx.strokeStyle = 'black';
+      ctx.setLineDash([10, 10]);
+
+
+// REFERENCIA
+      //semicirculo
+      // 3.14 Math.PI
+  //    ctx.arc(posx, posy, radio_ext, (0-20)*3.14/180, (180+20)*3.14/180, true); // en sentido angulos
+
+      //pintamos el contorno del camino
+  //    ctx.stroke();
+
+angulo = (90+ang_corr) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+      ctx.moveTo(Math.sin(angulo)*(-20*ratio_int)+posx, Math.cos(angulo)*(-20*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext-20)+posx, Math.cos(angulo)*(radio_ext-20)+posy);
+
+angulo = (0+ang_corr) * gradrad; //   *3.14/180;
+      ctx.moveTo(Math.sin(angulo)*(radio_int*-1*ratio_int)+posx, Math.cos(angulo)*(radio_int*-1*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext-10)+posx, Math.cos(angulo)*(radio_ext-10)+posy);
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+
+ctx.save();
+angulo = 0;
+ctx.translate(posx, posy);
+ctx.rotate((angulo-90)*gradrad);
+ctx.font = "15px Arial";
+ctx.fillStyle = 'black';
+ctx.textAlign = 'left';
+ctx.fillText('ELEVACION', 10, 20);
+ctx.restore();
+
+
+
+// ESCALA
+      ctx.beginPath();
+      ctx.strokeStyle = 'black';
+      ctx.setLineDash([]);
+
+  for(i=0+10; i<=90-10; i+=5){
+    angulo = ((i+180)*-1) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+      ctx.moveTo(Math.sin(angulo)*(radio_int*ratio_int)+posx, Math.cos(angulo)*(radio_int*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*radio_ext+posx, Math.cos(angulo)*radio_ext+posy);
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+	if(i%10==0){
+      // tipo letra y textos
+      ctx.font = "10px Arial";
+      ctx.fillStyle = "black"; //sat.color;
+      ctx.textAlign = "center";
+      ctx.fillText((i-ang_corr)*-1,    Math.sin(angulo)*(radio_ext+5)+posx, Math.cos(angulo)*(radio_ext+5)+posy);
+        }
+
+    ratio_int = (ratio_int==1)?1.1:1;
+  }
+
+
+
+// SATELITES
+  radio_int = radio_ext + 15;
+  radio_ext = radio_int + 15;
+  ratio_int = 1; // (ratio_int==1)?1.1:1;
+    for(i=0; i<arrSat.length; i++){
+      sat = arrSat[i];
+
+     //if(i>base){
+      //comenzamos el camino
+      ctx.beginPath();
+      ctx.strokeStyle = sat.color;
+
+    // angulo=(sat.elevacion*-1+180) * gradrad; //   *3.14/180;
+    angulo=(sat.elevacion+ang_corr) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+     // ctx.moveTo(Math.sin(angulo)*(radio_int*ratio_int)+posx, Math.cos(angulo)*(radio_int*ratio_int)+posy);
+      ctx.moveTo(Math.sin(angulo)*radio_int+posx, Math.cos(angulo)*radio_int+posy);
+      //ctx.lineTo(Math.sin(angulo)*(radio_ext+sat.offset)+posx, Math.cos(angulo)*(radio_ext+sat.offset)+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext+sat.offset*.5)+posx, Math.cos(angulo)*(radio_ext+sat.offset*.5)+posy);
+
+
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+      // tipo letra y textos
+      ctx.font = "10px Arial";
+      ctx.fillStyle = sat.color;
+      ctx.textAlign = "center";
+      if(sat.elevacion>68) ctx.textAlign = "right";
+      if(sat.elevacion<99) ctx.textAlign = "left";
+      //ctx.fillText(sat.elevacion+'°', Math.sin(angulo)*(radio_ext+(1*i*15))+posx, Math.cos(angulo)*(radio_ext+(1*i*15))+posy);
+      // ctx.fillText(sat.nombre,    Math.sin(angulo)*(radio_ext*(ratio_int+sat.offset))+posx, Math.cos(angulo)*(radio_ext*(ratio_int+sat.offset))+posy);
+      //ctx.fillText(sat.elevacion+'° '+sat.nombre,    Math.sin(angulo)*(radio_ext+(1*i*15))+posx, Math.cos(angulo)*(radio_ext+(1*i*15))+posy);
+  //    ctx.fillText(sat.elevacion+'° '+sat.nombre,    Math.sin(angulo)*(radio_ext)+posx, Math.cos(angulo)*(radio_ext+(1*i*15))+posy);
+
+
+ctx.save();
+//ctx.translate(Math.sin(angulo)*(radio_ext)+posx, (Math.cos(angulo)*(radio_ext+(1*i*15))+posy));
+ctx.translate(Math.sin(angulo)*(radio_ext)+posx, (Math.cos(angulo)*(radio_ext)+posy));
+ctx.rotate((-sat.elevacion+0)*gradrad); // -Math.PI / 4);  sat.elevacion*3.14/180
+ctx.textAlign = 'left';
+//ctx.fillText(sat.elevacion+'° '+sat.nombre, Math.sin(angulo)*(radio_ext)+posx, (Math.cos(angulo)*(radio_ext+(1*i*15))+posy)/2);
+      diff = 0;
+      if(sat.elevacion<66) diff = 3;
+      if(sat.elevacion>68) diff = -6;
+      if(sat.elevacion<62) diff = 0;
+//ctx.fillText(sat.elevacion+'° '+sat.nombre, 10+sat.offset, 4+diff);
+ctx.fillText(sat.nombre, 10+sat.offset*2.3, 4+diff);
+ctx.restore();
+
+
+//  ratio_int = (ratio_int==1)?1.2:1;
+     //}
+    }
+}
+</script>
+
+
+
+
+
+
+<script>
+function graficaGiro(posx, posy, radio_int, radio_ext, arrSat) {
+var myCanvas = document.getElementById("myCanvas");
+var ctx = myCanvas.getContext("2d");
+var angulo = 45;
+gradrad = Math.PI/180;
+ang_corr = 90;
+angulo = (angulo + ang_corr) * gradrad; //   *3.14/180;
+//var radio_int = 120; // 60
+//var radio_ext = 140; // 70
+//var posx = 400;
+//var posy = 410;
+var ratio_int=1;
+
+      ctx.beginPath();
+      ctx.strokeStyle = 'black';
+      ctx.setLineDash([10, 10]);
+
+// REFERENCIA
+      //semicirculo
+      // 3.14 Math.PI
+  //    ctx.arc(posx, posy, radio_ext, (0-20)*3.14/180, (180+20)*3.14/180, true); // en sentido angulos
+
+      //pintamos el contorno del camino
+  //    ctx.stroke();
+
+angulo = (90+ang_corr) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+      ctx.moveTo(Math.sin(angulo)*(-20*ratio_int)+posx, Math.cos(angulo)*(-20*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext-20)+posx, Math.cos(angulo)*(radio_ext-20)+posy);
+
+angulo = (0+ang_corr) * gradrad; //   *3.14/180;
+      ctx.moveTo(Math.sin(angulo)*(radio_int*-1*ratio_int)+posx, Math.cos(angulo)*(radio_int*-1*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext-10)+posx, Math.cos(angulo)*(radio_ext-10)+posy);
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+
+ctx.save();
+angulo = 0;
+ctx.translate(posx, posy);
+ctx.rotate((angulo-90)*gradrad);
+ctx.font = "15px Arial";
+ctx.fillStyle = 'black';
+ctx.textAlign = 'left';
+ctx.fillText('GIRO LNB', 10, 20);
+ctx.restore();
+
+
+
+// ESCALA
+      ctx.beginPath();
+      ctx.strokeStyle = 'black';
+      ctx.setLineDash([]);
+
+
+  for(i=0+20; i<=180-20; i+=5){
+    angulo = (i+ang_corr) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+      ctx.moveTo(Math.sin(angulo)*(radio_int*ratio_int)+posx, Math.cos(angulo)*(radio_int*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*radio_ext+posx, Math.cos(angulo)*radio_ext+posy);
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+	if(i%10==0){
+      // tipo letra y textos
+      ctx.font = "10px Arial";
+      ctx.fillStyle = "black"; //sat.color;
+      ctx.textAlign = "center";
+      ctx.fillText((i-ang_corr)*-1,    Math.sin(angulo)*(radio_ext+5)+posx, Math.cos(angulo)*(radio_ext+5)+posy);
+        }
+
+    ratio_int = (ratio_int==1)?1.1:1;
+  }
+
+
+
+// SATELITES
+  radio_int = radio_ext + 15;
+  radio_ext = radio_int + 15;
+  ratio_int = 1; // (ratio_int==1)?1.1:1;
+    for(i=0; i<arrSat.length; i++){
+      sat = arrSat[i];
+
+     //if(i>base){
+      //comenzamos el camino
+      ctx.beginPath();
+      ctx.strokeStyle = sat.color;
+
+     angulo=(sat.girolnb*-1+180) * gradrad; //   *3.14/180;
+//    angulo=(sat.norte+90) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+     // ctx.moveTo(Math.sin(angulo)*(radio_int*ratio_int)+posx, Math.cos(angulo)*(radio_int*ratio_int)+posy);
+      ctx.moveTo(Math.sin(angulo)*radio_int+posx, Math.cos(angulo)*radio_int+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext+sat.offset*.5)+posx, Math.cos(angulo)*(radio_ext+sat.offset*.5)+posy);
+
+
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+      // tipo letra y textos
+      ctx.font = "10px Arial";
+      ctx.fillStyle = sat.color;
+      ctx.textAlign = "center";
+      if(sat.norte<-30) ctx.textAlign = "right";
+      if(sat.norte>30) ctx.textAlign = "left";
+      // ctx.fillText(sat.norte+'°', Math.sin(angulo)*(radio_ext*ratio_int)+posx, Math.cos(angulo)*(radio_ext*ratio_int)+posy);
+      // ctx.fillText(sat.nombre,    Math.sin(angulo)*(radio_ext*(ratio_int+sat.offset))+posx, Math.cos(angulo)*(radio_ext*(ratio_int+sat.offset))+posy);
+      // ctx.fillText(sat.nombre,    Math.sin(angulo)*(radio_ext+sat.offset)+posx, Math.cos(angulo)*(radio_ext+sat.offset)+posy);
+
+
+
+
+
+ctx.save();
+//ctx.translate(Math.sin(angulo)*(radio_ext)+posx, (Math.cos(angulo)*(radio_ext+(1*i*15))+posy));
+ctx.translate(Math.sin(angulo)*(radio_ext)+posx, (Math.cos(angulo)*(radio_ext)+posy));
+ctx.rotate((sat.girolnb-90)*gradrad); // (-sat.girolnb+0)*gradrad); // -Math.PI / 4);  sat.girolnb*3.14/180
+ctx.textAlign = 'left';
+//ctx.fillText(sat.girolnb+'° '+sat.nombre, Math.sin(angulo)*(radio_ext)+posx, (Math.cos(angulo)*(radio_ext+(1*i*15))+posy)/2);
+      diff = 0;
+      if(sat.elevacion<66) diff = 3;
+      if(sat.elevacion>68) diff = -6;
+      if(sat.elevacion<62) diff = 0;
+// ctx.fillText(sat.girolnb+'° '+sat.nombre, 10+sat.offset*.5, 4+diff);
+ctx.fillText(sat.nombre, 10+sat.offset*0.5, 4); //+diff
+ctx.restore();
+
+
+
+//  ratio_int = (ratio_int==1)?1.2:1;
+     //}
+    }
+}
+</script>
+
+
+
+
+
+
+
+<script>
+function graficaCinta(posx, posy, ancho, alto, arrSat) {
+var x=posx; // 10;
+var y=posy; // 500;
+//var ancho=700;
+//var alto=50;
+var myCanvas = document.getElementById("myCanvas");
+var ctx = myCanvas.getContext("2d");
+
+      //borramos el contenido del canvas
+      //ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+
+      //definimos el grosor de la línea
+      ctx.lineWidth = 1;
+
+      //definimos el color de la línea
+      ctx.strokeStyle = 'black';
+
+      //rectangulo exterior
+      ctx.strokeRect(x, y, ancho*2, alto);
+
+      //ctx.rect(x, y, ancho, alto);
+      //pintamos el contorno del camino
+      //ctx.stroke();
+
+      ctx.font = "20px Arial";
+      ctx.fillStyle = 'black';
+      ctx.textAlign = 'left'; // 'center'; // 'right'; 
+      ctx.fillText('CINTA DE ORIENTACION', x+ancho*2+40, y+alto/2); 
+      ctx.fillText('360° PARA USAR EN TUBO', x+ancho*2+40, y+alto/2+20); 
+
+
+      ctx.font = "10px Arial";
+      ctx.fillStyle = 'black';
+      ctx.textAlign = 'left'; // 'center'; // 'right'; 
+      ctx.fillText('Imprimir, cortar y pegar en tubo con antena orientada al Norte', x+ancho*2+40, y+alto/2+30); 
+
+
+
+    //N=47*5;	// 47*5 cantidad asociada a la vuelta del tubo
+    //N=ancho/2;	// cantidad asociada a la vuelta del tubo
+    N = ancho;  // 180 grados del tubo segun plantilla
+
+      //comenzamos el camino
+      ctx.beginPath();
+      ctx.strokeStyle = sat.color;
+
+for(a=-90; a<=90; a+=5){
+  norte = a;
+  color = 'lightgray';
+  Y = alto;
+
+  if(a%10 == 0) { 
+    Y = alto+10; 
+    color = 'gray';
+  }
+
+  X = Math.round((norte+90)*N/180*100)/100;
+
+      ctx.strokeStyle = color;
+
+     resta = 0;
+     if(a%10 == 0) { resta=10 }
+
+      //punto inicio y trazo
+      ctx.moveTo(X+x, y-resta);
+      ctx.lineTo(X+x, y+Y-resta+5);
+
+      //punto inicio y trazo
+      ctx.moveTo(X*-1+x+N*2, y-resta);
+      ctx.lineTo(X*-1+x+N*2, y+Y-resta+5);
+
+     if(a%10 == 0) { 
+      // tipo letra y textos
+      ctx.font = "8px Arial";
+      ctx.fillStyle = 'black';
+      ctx.textAlign = "center";
+//      ctx.fillText(sat.norte+'°', sat.X+x, y+sat.Y+alto+10);
+//      ctx.fillText(a, X+x, y+Y+10);
+//      ctx.fillText(a, X*-1+x+N*2, y+Y+10);
+
+      ctx.fillText(a, X+x, y-resta-5);
+      ctx.fillText(a, X*-1+x+N*2, y-resta-5);
+     }
+}
+
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+
+	// FRONTAL
+    for(i=0; i<arrS.length; i++){
+      sat = arrS[i];
+
+      //comenzamos el camino
+      ctx.beginPath();
+      ctx.strokeStyle = sat.color;
+
+      //punto inicio y trazo
+      ctx.moveTo(sat.X+x, y);
+      ctx.lineTo(sat.X+x, y+10+sat.Y*0.5+alto);
+
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+      // tipo letra y textos
+      ctx.font = "10px Arial";
+      ctx.fillStyle = sat.color;
+      ctx.textAlign = "center";
+//      ctx.fillText(sat.norte+'°', sat.X+x, y+sat.Y+alto+10);
+//      ctx.fillText(sat.nombre, sat.X+x, y+sat.Y+alto+20);
+
+
+ctx.save();
+//ctx.translate(Math.sin(angulo)*(radio_ext)+posx, (Math.cos(angulo)*(radio_ext+(1*i*15))+posy));
+//ctx.translate(Math.sin(angulo)*(radio_ext)+posx, (Math.cos(angulo)*(radio_ext)+posy));
+ctx.translate(sat.X+x, y+sat.Y+alto+20);
+ctx.rotate((90)*gradrad);
+ctx.textAlign = 'left'; // 'center'; // 'right'; // 
+//ctx.fillText(sat.girolnb+'° '+sat.nombre, 1+sat.offset*.5, 4);
+ctx.fillText(sat.nombre, 1+sat.offset*0.5, 4); //+diff
+ctx.restore();
+
+
+    }
+
+
+
+	// INVERTIDO
+    for(i=0; i<arrS.length; i++){
+      sat = arrS[i];
+
+      //comenzamos el camino
+      ctx.beginPath();
+      ctx.strokeStyle = sat.color;
+
+      //punto inicio y trazo
+      ctx.moveTo(sat.X*-1+x+N*2, y);
+      ctx.lineTo(sat.X*-1+x+N*2, y+10+sat.Y*0.5+alto);
+
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+      // tipo letra y textos
+      ctx.font = "10px Arial";
+      ctx.fillStyle = sat.color;
+      ctx.textAlign = "center";
+//      ctx.fillText(sat.norte+'°', sat.X*-1+x+N*2, y+sat.Y+alto+10);
+//      ctx.fillText(sat.nombre, sat.X*-1+x+N*2, y+sat.Y+alto+20);
+
+
+ctx.save();
+//ctx.translate(Math.sin(angulo)*(radio_ext)+posx, (Math.cos(angulo)*(radio_ext+(1*i*15))+posy));
+//ctx.translate(Math.sin(angulo)*(radio_ext)+posx, (Math.cos(angulo)*(radio_ext)+posy));
+ctx.translate(sat.X*-1+x+N*2, y+sat.Y+alto+20);
+ctx.rotate((90)*gradrad);
+ctx.textAlign = 'left'; // 'center'; // 'right'; // 
+//ctx.fillText(sat.girolnb+'° '+sat.nombre, 1+sat.offset*.5, 4);
+ctx.fillText(sat.nombre, 1+sat.offset*0.5, 4); //+diff
+ctx.restore();
+
+
+
+    }
+
+}
+</script>
+
+
+
+
+
+
+<script>
+function graficaPlanilla(x, y, ancho=800, alto=50) {
+//var x=10;
+//var y=10;
+//var ancho=800;
+//var alto=50;
+var myCanvas = document.getElementById("myCanvas");
+//myCanvas.width = 900;
+//myCanvas.height = 1000;
+var ctx = myCanvas.getContext("2d");
+
+      //borramos el contenido del canvas
+//      ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+
+      //definimos el grosor de la línea
+      ctx.lineWidth = 1;
+
+      //definimos el color de la línea
+      ctx.strokeStyle = 'black';
+
+      //rectangulo exterior
+      ctx.strokeRect(x, y, ancho, alto);
+
+      //ctx.rect(x, y, ancho, alto);
+      //pintamos el contorno del camino
+      //ctx.stroke();
+
+      //comenzamos el camino
+      ctx.beginPath();
+
+    for(xi=x; xi<=x+ancho; xi+=5 ){
+      //punto inicio
+      ctx.moveTo(xi,y);
+      ctx.lineTo(xi,y+alto);
+      cada10=0;
+      if((xi-x)%10!=0) cada10=10;
+      if((xi-x)%50) ctx.lineTo(xi,y+alto+10+cada10);
+      ctx.font = "10px Arial";
+      ctx.fillStyle = 'black';
+      ctx.textAlign = 'center'; // 'right'; 'left'; // 
+      //ctx.fillText(((xi-x)/5)%10, xi, y+alto+30); 
+      if((xi-x)%50) ctx.fillText(((xi-x)/5)%10, xi, y+alto+30); 
+      if( (xi-x)%50==0 ) ctx.fillText(((xi-x)/5), xi, y+alto+39); 
+    }
+      //figura cerrada
+      //ctx.closePath();
+
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+      ctx.font = "10px Arial";
+      ctx.fillStyle = 'black';
+      ctx.textAlign = 'left'; // 'center'; // 'right'; 
+      ctx.fillText('Imprimir plantilla, medir 180° del tubo de la antena,  luego usar ese numero para imprimir la cinta oficial que calce con tu antena', x, y+alto+50); 
+}
+</script>
+
+
+
+
+<script>
+var myCanvas = document.getElementById("myCanvas");
+var ctx = myCanvas.getContext("2d");
+myCanvas.width = 900;
+myCanvas.height = 800;
+
+var lineas = 47;  // la cantidad de lineas para los 180 grados
+var arrS= [0];
+i=0;
+
+class Sat {
+  constructor(id, longitud, nombre='', color='black', offset=0) {
+    this.id = id;
+    this.long = longitud;
+    this.lat = 0; // los geo estacionarios estan en el ecuador por lo que es lat 0
+    this.nombre = nombre;
+    this.color = color;
+    this.offset = offset;
+    this.magnorte = 0;  // norte magnetico calculado
+    this.norte = 0;  // referencia con respecto al norte calculado
+    this.azimut = 0;
+    this.elevacion = 0;
+    this.girolnb = 0;
+    this.X = 0; //(norte+90)*N/180;
+    this.Y = 1; //Y;
+  }
+
+  dishpointer(pointer) {
+    let N=lineas*5; //47*5;  // 180 grados del tubo segun la plantilla, es por 5 ya que la plantilla es de 5 en 5
+    this.azimut = Math.round(pointer[0]*100)/100; // azimut
+    this.elevacion = Math.round(pointer[1]*100)/100; // elev
+    this.girolnb = -1*Math.round(pointer[2]*100)/100; // giro
+    this.norte = this.azimut - ((this.azimut>270) ? 360: 0);
+    this.X = Math.round((this.norte+90)*N/180*100)/100;
+    this.Y = this.offset; //Y;
+  }
+}
+
+var lat = -18.45, long = -70.29;
+
+  //arrS[i++] = new Sat(i, long, 'NORTE', 'black', 0);
+  arrS[i++] = new Sat(i, -30, 'HSP 30W', 'red', 0);
+  arrS[i++] = new Sat(i, -61, 'AMZ 61W', 'red', 0);
+  arrS[i++] = new Sat(i, -71.8, "AR1 71.8W", 'gray', 20);
+  arrS[i++] = new Sat(i, -73.9, 'HSP 74W', 'red', 0);
+  arrS[i++] = new Sat(i, -77, "QTZ 77W", 'gray', 20);
+  arrS[i++] = new Sat(i, -87.1, 'TPK 87W', 'red', 0);
+  arrS[i++] = new Sat(i, -92, "BRZ 92W", 'gray', 10);
+
+  // LIMPIAR INICIALIZAR LISTADO
+  var ul, li;
+  ul = document.getElementById('sats');
+  for(i=0; ul.childElementCount; i++){
+     ul.removeChild(ul.firstElementChild);
+  }
+
+  // CARGAR LISTADO
+  for(i=0; i<arrS.length; i++){
+	li = document.createElement("li");
+	li.setAttribute('long', arrS[i].long);
+	li.innerText = arrS[i].nombre;
+	ul.appendChild(li);
+  }
+
+// AGREGAR EL NORTE
+arrS.push( new Sat(i, long, 'NORTE', 'black', 0) );
+
+  // CALULAR APUNTAMIENTO
+  for(i=0; i<arrS.length; i++){
+    arrS[i].dishpointer( dishpoint(lat, long, arrS[i].long) ); //  eslat, eslong, satlong
+  }
+
+graficaAzimut(180, 260, 120, 140, arrS);
+graficaElevacion(400, 260, 120, 140, arrS);
+graficaGiro(700, 260, 120, 140, arrS);
+graficaCinta(50, 330, lineas*5, 50, arrS);
+graficaPlanilla(50, 500, 800, 50);
+
+arrS.pop();
+</script>
+
+<script>
+function calcGraph() {
+lat = frm.lat.value;
+long = frm.long.value;
+lineas = frm.lines.value;
+
+var myCanvas = document.getElementById("myCanvas");
+var ctx = myCanvas.getContext("2d");
+myCanvas.width = 900;
+myCanvas.height = 800;
+
+      //borramos el contenido del canvas
+      ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+
+  // INICIALIZAR LISTADO
+arrS = [];
+
+  // CARGAR LISTADO
+ul = document.getElementById('sats');
+for(i=0; i<ul.childElementCount ;i++){
+ nameS = ul.children.item(i).innerText;    // ul.childNodes[i].innerText;
+ longS = ul.children.item(i).getAttribute('long');  //   ul.childNodes[i].getAttribute('long');
+ arrS.push(new Sat(i, longS, nameS, 'black', 0) );
+}
+
+// AGREGAR EL NORTE
+arrS.push( new Sat(i, long, 'NORTE', 'black', 0) );
+
+  // CALULAR APUNTAMIENTO
+  for(i=0; i<arrS.length; i++){
+    arrS[i].dishpointer( dishpoint(lat, long, arrS[i].long) ); //  eslat, eslong, satlong
+  }
+
+graficaAzimut(180, 260, 120, 140, arrS);
+graficaElevacion(400, 260, 120, 140, arrS);
+graficaGiro(700, 260, 120, 140, arrS);
+graficaCinta(50, 330, lineas*5, 50, arrS);
+graficaPlanilla(50, 500, 800, 50);
+arrS.pop();
+}
+</script>
+
+
+
+
+</body>
+</html>
