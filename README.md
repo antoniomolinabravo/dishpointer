@@ -5,7 +5,7 @@ Como dato de entrada se le da la Latitud y Longitud de la antena receptora y com
 
 Recordar que la Longitud Oeste (W) es Negativa y la Este (E) es Positiva, lo mismo con la Latitud Norte (N) es Positiva y Sur (S) es Negativa
 
-Ademas se genera una Cinta Plantilla imprimible para el tubo vertical de la antena satelital, el cual se usa para medir la vuelta o media vuelta los 180°, se cuentan las rayas, este numero se ingresa en el formulario y como resultado se genera la Cinta imprimible para apuntamiento perfecto de todos el set de satelites ingresados, facilitando mucho el trabajo, es importante que al pegar la cinta en el tubo, esta apunte hacia el norte donde dice norte.
+Ademas se genera una Cinta Plantilla imprimible para el tubo vertical de la antena satelital, el cual se usa para medir la vuelta o media vuelta los 180°, se cuentan las rayas, este numero se ingresa en el formulario y como resultado se genera la Cinta imprimible para apuntamiento perfecto de todos el set de satelites ingresados, facilitando mucho el trabajo, es importante que al pegar la cinta en el tubo, esta apunte hacia el norte o sur donde dice norte. (da lo mismo si es norte o sur ya que esta espejada la cinta)
 
 Si se fijan la cinta tiene un area para cubrir el tubo por completo, pero esta espejada, de manera tal que la pueden ver desde adelante o desde atras y seran los mismos puntos de orientacion.
 
