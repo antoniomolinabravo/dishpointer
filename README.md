@@ -33,6 +33,10 @@ Una vez cazado el satelite y detectado algunos TP con canales o radios FTA (libr
 
 Finalmente lo que se suele hacere es **MARCAR** la elevacion, orientacion norte y el giro del LNB, (hacer una ralla entre el area fija del metal y la que se mueve) para luego poder volver cuando quieras a ese punto sin tener que realizar tantos pasos, ni dedicar tanto tiempo.
 
+
+Proximamente agregare la correccion del Norte Magnetico, pero como alternativa inmediata, habiendo apuntando un satelite, puede pegar otra vez la cinta en el tubo fijando ese satelite en su posicion real (asi corrigen todas las posiciones en un solo paso) y verificar la diferencia entre el Norte y el norte magnetico que le dara cualquier brujula, suele ser minima la diferencia que como les comente este es un punto no es tan critico y permite olgura, ya que, suele cubrir un par de grados a cada lado gracias a la forma de la antena parabolica y el ancho de la señal emitida.
+
+
 Suerte con la caceria !!!
 y que el FTA te bendiga
 
