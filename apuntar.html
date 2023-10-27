@@ -609,6 +609,17 @@ for(a=-90; a<=90; a+=5){
       ctx.fillText(a, X+x, y-resta-5);
       ctx.fillText(a, X*-1+x+N*2, y-resta-5);
      }
+
+     if(a == -90 || a == 180) { 
+      ctx.fillText('O', X+x, y+Y+10);
+      ctx.fillText('O', X*-1+x+N*2, y+Y+10);
+     }
+
+     if(a == 90) { 
+      ctx.fillText('E', X+x, y+Y+10);
+      ctx.fillText('E', X*-1+x+N*2, y+Y+10);
+     }
+
 }
 
       //pintamos el contorno del camino
