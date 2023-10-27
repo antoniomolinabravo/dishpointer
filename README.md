@@ -1,6 +1,6 @@
 # dishpointer
 Apuntador Satelital grafico de orbita GeoEstacionaria
-
+ 
 Como dato de entrada se le da la Latitud y Longitud de la antena receptora y como resultado se obtiene un mapa o dashboard de apuntamiento para el set de satelites Geoestacionarios del listado entregado, pueden ser agregados otros.
 
 Recordar que la Longitud Oeste (W) es Negativa y la Este (E) es Positiva, lo mismo con la Latitud Norte (N) es Positiva y Sur (S) es Negativa
