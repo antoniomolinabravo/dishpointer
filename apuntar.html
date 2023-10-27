@@ -24,14 +24,16 @@
 
 <div>Satelites</div>
 <ul id='sats'>
-  <li long='-30'>HSP 30W</li>
-  <li long='-61'>AMZ 61W</li>
-  <li long='-71.8'>AR1 71.8W</li>
-  <li long='-73.9'>HSP 74W</li>
-  <li long='-77'>QTZ 77W</li>
-  <li long='-87.1'>TPK 87W</li>
-  <li long='-92'>BRZ 92W</li>
+  <li long='-30' color='red' offset='0'>HSP 30W</li>
+  <li long='-61' color='red' offset='0'>AMZ 61W</li>
+  <li long='-71.8' color='gray' offset='20'>AR1 71.8W</li>
+  <li long='-73.9' color='red' offset='0'>HSP 74W</li>
+  <li long='-77' color='gray' offset='20'>QTZ 77W</li>
+  <li long='-87.1' color='red' offset='0'>TPK 87W</li>
+  <li long='-92' color='gray' offset='10'>BRZ 92W</li>
 </ul>
+
+
 
 <script>
 function addSat() {
@@ -42,6 +44,8 @@ function addSat() {
 
  li = document.createElement("li");
  li.setAttribute('long', frm2.longS.value);
+ li.setAttribute('color', 'gray');
+ li.setAttribute('offset', '0');
  li.innerText = frm2.nombre.value;
  ul.appendChild(li);
 }
@@ -829,6 +833,8 @@ var lat = -18.45, long = -70.29;
   for(i=0; i<arrS.length; i++){
 	li = document.createElement("li");
 	li.setAttribute('long', arrS[i].long);
+	li.setAttribute('color', arrS[i].color);
+	li.setAttribute('offset', arrS[i].offset);
 	li.innerText = arrS[i].nombre;
 	ul.appendChild(li);
   }
@@ -872,7 +878,9 @@ ul = document.getElementById('sats');
 for(i=0; i<ul.childElementCount ;i++){
  nameS = ul.children.item(i).innerText;    // ul.childNodes[i].innerText;
  longS = ul.children.item(i).getAttribute('long');  //   ul.childNodes[i].getAttribute('long');
- arrS.push(new Sat(i, longS, nameS, 'black', 0) );
+ colorS = ul.children.item(i).getAttribute('color');
+ offsetS = ul.children.item(i).getAttribute('offset');
+ arrS.push(new Sat(i, longS, nameS, colorS, offsetS) );
 }
 
 // AGREGAR EL NORTE
