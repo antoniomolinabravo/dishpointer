@@ -36,4 +36,4 @@ Finalmente lo que se suele hacere es **MARCAR** la elevacion, orientacion norte 
 Suerte con la caceria !!!
 y que el FTA te bendiga
 
-![Screenshot of Apuntador Dishpointer](sample.png)
+![Screenshot of Apuntador Dishpointer v0.1](sample.png)
