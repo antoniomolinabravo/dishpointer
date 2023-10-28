@@ -36,7 +36,7 @@ Finalmente lo que se suele hacere es **MARCAR** la elevacion, orientacion norte 
 
 Proximamente agregare la correccion del Norte Magnetico, pero como alternativa inmediata, habiendo apuntando un satelite, puede pegar otra vez la cinta en el tubo fijando ese satelite en su posicion real (asi corrigen todas las posiciones en un solo paso) y verificar la diferencia entre el Norte y el norte magnetico que le dara cualquier brujula, suele ser minima la diferencia que como les comente este es un punto no es tan critico y permite olgura, ya que, suele cubrir un par de grados a cada lado gracias a la forma de la antena parabolica y el ancho de la señal emitida.
 
-Para cerrar informarles que no se requiere mucho para hacer funcionar esta App, con solo tener el archivo apuntar.html en un telefono movil, no requiere internet, ni nada extra para funcionar. solo ingresen su posicion dan a Calcular y listo. incluso se la pueden enviar por whatsapp y ejecutarla offline desde ahi.
+Para cerrar informarles que no se requiere mucho para hacer funcionar esta App, con solo tener el archivo app.html en un telefono movil, no requiere internet, ni nada extra para funcionar. solo ingresen su posicion dan a Calcular y listo. incluso se la pueden enviar por whatsapp y ejecutarla offline desde ahi.
 
 Suerte con la caceria !!!
 y que el FTA te bendiga
