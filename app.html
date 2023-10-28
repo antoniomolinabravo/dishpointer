@@ -1,0 +1,760 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dishpointer</title>
+</head>
+
+<body>
+
+<form name='frm'>
+<label for="lat">Lat:</label>
+<input id='lat' name='lat' type='number' min='-99' max='99' step='0.1' value='-18.45'>
+<label for="long">Long:</label>
+<input id='long' name='long' type='number' min='-99' max='99' step='0.1' value='-70.29'>
+<br>
+<label for="lines">Lineas:</label>
+<input id='lines' name='lines' type='number' min='0' max='200' step='1' value='47'>
+<input type='button' value='Re-Calc' onclick='calcGraph()'>
+</form>
+
+
+<HR>
+
+
+<form name='frm2'>
+<label for="longS">Long Sat:</label>
+<input id='longS' name='longS' type='number' min='-99' max='99' step='0.01' value='' placeholder='-73.9'>
+<br><small>W:negativo / E:positivo</small>
+<br>
+<label for="nombre">Nombre Sat:</label>
+<input id='nombre' name='nombre' type='text' value='' placeholder='nombre satelite'>
+<input type='button' value='Add Sat' onclick='addSat()'>
+</form>
+
+<br>
+<div>Listado de Satelites</div>
+<ul id='sats'>
+  <li long='-30' color='red' offset='0'>HSP 30W</li>
+  <li long='-61' color='red' offset='0'>AMZ 61W</li>
+  <li long='-71.8' color='gray' offset='20'>AR1 71.8W</li>
+  <li long='-73.9' color='red' offset='0'>HSP 74W</li>
+  <li long='-77' color='gray' offset='20'>QTZ 77W</li>
+  <li long='-87.1' color='red' offset='0'>TPK 87W</li>
+  <li long='-92' color='gray' offset='10'>BRZ 92W</li>
+</ul>
+
+
+
+<script>
+function addSat() {
+ ul = document.getElementById('sats');
+
+ li = document.createElement("li");
+ li.setAttribute('long', frm2.longS.value);
+ li.setAttribute('color', 'gray');
+ li.setAttribute('offset', '0');
+ li.innerText = frm2.nombre.value;
+ ul.appendChild(li);
+}
+</script>
+
+
+
+    <canvas id="myCanvas"></canvas>
+
+
+<!-- /////////////////////////////// -->
+
+
+<script>
+function dishpoint(eslat, eslong, satlong) {
+  radgrad = 180 / Math.PI;  // /57.29578
+  longdiffr = (eslong-satlong)/radgrad;
+  eslatr = eslat/radgrad;
+
+  tanlong = Math.tan(longdiffr);
+  sinlat = Math.sin(eslatr);
+
+  esazimuth = 180 + radgrad * Math.atan(tanlong / sinlat);
+  if (eslat<0) esazimuth = esazimuth - 180; 
+  if (esazimuth<0) esazimuth = esazimuth + 360.0;
+//  return esazimuth;
+
+
+  radiotierra = 6378.16;
+  radioorbita = 35786;
+
+  coslong = Math.cos(longdiffr);
+  coslat = Math.cos(eslatr);
+
+  r1 = 1 + radioorbita/radiotierra;
+  v1 = r1 * coslat * coslong - 1;
+  v2 = r1 * Math.sqrt(1 - coslat * coslat * coslong * coslong);
+  eselevation = radgrad * Math.atan(v1/v2);
+  eselrefracted = eselevation;
+  if (eselevation<30)
+     eselrefracted = (eselevation + Math.sqrt(eselevation * eselevation + 4.132))/2
+//  return eselrefracted;
+
+
+  sinlong = Math.sin(longdiffr);
+  tanlat = Math.tan(eslatr);
+
+  longdiffr = (satlong-eslong)/radgrad;
+  poltilt = -1 * radgrad * Math.atan(sinlong / tanlat);
+//  return poltilt;
+
+
+  return [esazimuth, eselrefracted, poltilt];
+}
+</script>
+
+
+
+
+<script>
+function graficaAzimut(posx, posy, radio_int, radio_ext, arrSat) {
+var myCanvas = document.getElementById("myCanvas");
+var ctx = myCanvas.getContext("2d");
+var angulo = 45;
+gradrad = Math.PI/180;
+ang_corr = 90;
+angulo = (angulo + ang_corr) * gradrad; //   *3.14/180;
+
+var ratio_int=1;
+
+      ctx.beginPath();
+      ctx.strokeStyle = 'black';
+      ctx.setLineDash([10, 10]);
+
+// REFERENCIA
+
+angulo = (90+ang_corr) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+      ctx.moveTo(Math.sin(angulo)*(-20*ratio_int)+posx, Math.cos(angulo)*(-20*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext-20)+posx, Math.cos(angulo)*(radio_ext-20)+posy);
+
+angulo = (0+ang_corr) * gradrad; //   *3.14/180;
+      ctx.moveTo(Math.sin(angulo)*(radio_int*-1*ratio_int)+posx, Math.cos(angulo)*(radio_int*-1*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext-10)+posx, Math.cos(angulo)*(radio_ext-10)+posy);
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+
+ctx.save();
+angulo = 0;
+ctx.translate(posx, posy);
+ctx.rotate((angulo-90)*gradrad);
+ctx.font = "20px Arial";
+ctx.fillStyle = 'black';
+ctx.textAlign = 'left';
+ctx.fillText('NORTE', 10, 20);
+ctx.restore();
+
+      ctx.beginPath();
+      ctx.setLineDash([]);
+      ctx.font = "10px Arial";
+      ctx.fillStyle = "black";
+      ctx.textAlign = "center";
+      ctx.fillText('lat:'+lat+ '    long:'+long,    posx, posy+10);
+
+
+// ESCALA
+      ctx.strokeStyle = "black";
+  for(i=0+20; i<=180-20; i+=5){
+    angulo = (i+ang_corr) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+      ctx.moveTo(Math.sin(angulo)*(radio_int*ratio_int)+posx, Math.cos(angulo)*(radio_int*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*radio_ext+posx, Math.cos(angulo)*radio_ext+posy);
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+	if(i%10==0){
+      // tipo letra y textos
+      ctx.font = "10px Arial";
+      ctx.fillStyle = "black"; //sat.color;
+      ctx.textAlign = "center";
+      ctx.fillText((i-ang_corr)*-1,    Math.sin(angulo)*(radio_ext+5)+posx, Math.cos(angulo)*(radio_ext+5)+posy);
+        }
+
+    ratio_int = (ratio_int==1)?1.1:1;
+  }
+
+
+
+// SATELITES
+  radio_int = radio_ext + 15;
+  radio_ext = radio_int + 15;
+  ratio_int = 1; // (ratio_int==1)?1.1:1;
+    for(i=0; i<arrSat.length; i++){
+      sat = arrSat[i];
+
+      //comenzamos el camino
+      ctx.beginPath();
+      ctx.strokeStyle = sat.color;
+
+     angulo=(sat.norte*-1+180) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+      ctx.moveTo(Math.sin(angulo)*radio_int+posx, Math.cos(angulo)*radio_int+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext+sat.offset*.5)+posx, Math.cos(angulo)*(radio_ext+sat.offset*.5)+posy);
+
+
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+      // tipo letra y textos
+      ctx.font = "10px Arial";
+      ctx.fillStyle = sat.color;
+
+ctx.save();
+ctx.translate(Math.sin(angulo)*(radio_ext)+posx, (Math.cos(angulo)*(radio_ext)+posy));
+ctx.rotate((sat.norte-90)*gradrad); // (-sat.girolnb+0)*gradrad); // -Math.PI / 4);  sat.girolnb*3.14/180
+ctx.textAlign = 'left';
+      diff = 0;
+      if(sat.elevacion<66) diff = 3;
+      if(sat.elevacion>68) diff = -6;
+      if(sat.elevacion<62) diff = 0;
+// ctx.fillText(sat.norte+'° '+sat.nombre, 10+sat.offset*.5, 4+diff);
+ctx.fillText(sat.nombre, 10+sat.offset*0.5, 4); // +diff
+ctx.restore();
+
+    }
+}
+</script>
+
+
+
+
+<script>
+function graficaElevacion(posx, posy, radio_int, radio_ext, arrSat) {
+var myCanvas = document.getElementById("myCanvas");
+var ctx = myCanvas.getContext("2d");
+var angulo = 45;
+gradrad = Math.PI/180;
+ang_corr = 90;
+angulo = (angulo + ang_corr) * gradrad; //   *3.14/180;
+var ratio_int=1;
+
+
+      ctx.beginPath();
+      ctx.strokeStyle = 'black';
+      ctx.setLineDash([10, 10]);
+
+
+// REFERENCIA
+
+angulo = (90+ang_corr) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+      ctx.moveTo(Math.sin(angulo)*(-20*ratio_int)+posx, Math.cos(angulo)*(-20*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext-20)+posx, Math.cos(angulo)*(radio_ext-20)+posy);
+
+angulo = (0+ang_corr) * gradrad; //   *3.14/180;
+      ctx.moveTo(Math.sin(angulo)*(radio_int*-1*ratio_int)+posx, Math.cos(angulo)*(radio_int*-1*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext-10)+posx, Math.cos(angulo)*(radio_ext-10)+posy);
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+
+ctx.save();
+angulo = 0;
+ctx.translate(posx, posy);
+ctx.rotate((angulo-90)*gradrad);
+ctx.font = "15px Arial";
+ctx.fillStyle = 'black';
+ctx.textAlign = 'left';
+ctx.fillText('ELEVACION', 10, 20);
+ctx.restore();
+
+
+
+// ESCALA
+      ctx.beginPath();
+      ctx.strokeStyle = 'black';
+      ctx.setLineDash([]);
+
+  for(i=0+10; i<=90-10; i+=5){
+    angulo = ((i+180)*-1) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+      ctx.moveTo(Math.sin(angulo)*(radio_int*ratio_int)+posx, Math.cos(angulo)*(radio_int*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*radio_ext+posx, Math.cos(angulo)*radio_ext+posy);
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+	if(i%10==0){
+      // tipo letra y textos
+      ctx.font = "10px Arial";
+      ctx.fillStyle = "black"; //sat.color;
+      ctx.textAlign = "center";
+      ctx.fillText((i-ang_corr)*-1,    Math.sin(angulo)*(radio_ext+5)+posx, Math.cos(angulo)*(radio_ext+5)+posy);
+        }
+
+    ratio_int = (ratio_int==1)?1.1:1;
+  }
+
+
+
+// SATELITES
+  radio_int = radio_ext + 15;
+  radio_ext = radio_int + 15;
+  ratio_int = 1; // (ratio_int==1)?1.1:1;
+    for(i=0; i<arrSat.length; i++){
+      sat = arrSat[i];
+
+      //comenzamos el camino
+      ctx.beginPath();
+      ctx.strokeStyle = sat.color;
+
+    angulo=(sat.elevacion+ang_corr) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+      ctx.moveTo(Math.sin(angulo)*radio_int+posx, Math.cos(angulo)*radio_int+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext+sat.offset*.5)+posx, Math.cos(angulo)*(radio_ext+sat.offset*.5)+posy);
+
+
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+      // tipo letra y textos
+      ctx.font = "10px Arial";
+      ctx.fillStyle = sat.color;
+
+ctx.save();
+ctx.translate(Math.sin(angulo)*(radio_ext)+posx, (Math.cos(angulo)*(radio_ext)+posy));
+ctx.rotate((-sat.elevacion+0)*gradrad); // -Math.PI / 4);  sat.elevacion*3.14/180
+ctx.textAlign = 'left';
+      diff = 0;
+      if(sat.elevacion<66) diff = 3;
+      if(sat.elevacion>68) diff = -6;
+      if(sat.elevacion<62) diff = 0;
+//ctx.fillText(sat.elevacion+'° '+sat.nombre, 10+sat.offset, 4+diff);
+ctx.fillText(sat.nombre, 10+sat.offset*2.3, 4+diff);
+ctx.restore();
+
+    }
+}
+</script>
+
+
+
+
+
+
+<script>
+function graficaGiro(posx, posy, radio_int, radio_ext, arrSat) {
+var myCanvas = document.getElementById("myCanvas");
+var ctx = myCanvas.getContext("2d");
+var angulo = 45;
+gradrad = Math.PI/180;
+ang_corr = 90;
+angulo = (angulo + ang_corr) * gradrad; //   *3.14/180;
+var ratio_int=1;
+
+      ctx.beginPath();
+      ctx.strokeStyle = 'black';
+      ctx.setLineDash([10, 10]);
+
+// REFERENCIA
+angulo = (90+ang_corr) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+      ctx.moveTo(Math.sin(angulo)*(-20*ratio_int)+posx, Math.cos(angulo)*(-20*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext-20)+posx, Math.cos(angulo)*(radio_ext-20)+posy);
+
+angulo = (0+ang_corr) * gradrad; //   *3.14/180;
+      ctx.moveTo(Math.sin(angulo)*(radio_int*-1*ratio_int)+posx, Math.cos(angulo)*(radio_int*-1*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext-10)+posx, Math.cos(angulo)*(radio_ext-10)+posy);
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+
+ctx.save();
+angulo = 0;
+ctx.translate(posx, posy);
+ctx.rotate((angulo-90)*gradrad);
+ctx.font = "15px Arial";
+ctx.fillStyle = 'black';
+ctx.textAlign = 'left';
+ctx.fillText('GIRO LNB', 10, 20);
+ctx.restore();
+
+
+// ESCALA
+      ctx.beginPath();
+      ctx.strokeStyle = 'black';
+      ctx.setLineDash([]);
+
+
+  for(i=0+20; i<=180-20; i+=5){
+    angulo = (i+ang_corr) * gradrad; //   *3.14/180;
+      //punto inicio y trazo
+      ctx.moveTo(Math.sin(angulo)*(radio_int*ratio_int)+posx, Math.cos(angulo)*(radio_int*ratio_int)+posy);
+      ctx.lineTo(Math.sin(angulo)*radio_ext+posx, Math.cos(angulo)*radio_ext+posy);
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+	if(i%10==0){
+      // tipo letra y textos
+      ctx.font = "10px Arial";
+      ctx.fillStyle = "black"; //sat.color;
+      ctx.textAlign = "center";
+      ctx.fillText((i-ang_corr)*-1,    Math.sin(angulo)*(radio_ext+5)+posx, Math.cos(angulo)*(radio_ext+5)+posy);
+        }
+
+    ratio_int = (ratio_int==1)?1.1:1;
+  }
+
+
+
+// SATELITES
+  radio_int = radio_ext + 15;
+  radio_ext = radio_int + 15;
+  ratio_int = 1; // (ratio_int==1)?1.1:1;
+    for(i=0; i<arrSat.length; i++){
+      sat = arrSat[i];
+
+      //comenzamos el camino
+      ctx.beginPath();
+      ctx.strokeStyle = sat.color;
+
+     angulo=(sat.girolnb*-1+180) * gradrad; //   *3.14/180;
+      ctx.moveTo(Math.sin(angulo)*radio_int+posx, Math.cos(angulo)*radio_int+posy);
+      ctx.lineTo(Math.sin(angulo)*(radio_ext+sat.offset*.5)+posx, Math.cos(angulo)*(radio_ext+sat.offset*.5)+posy);
+
+
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+      // tipo letra y textos
+      ctx.font = "10px Arial";
+      ctx.fillStyle = sat.color;
+
+ctx.save();
+ctx.translate(Math.sin(angulo)*(radio_ext)+posx, (Math.cos(angulo)*(radio_ext)+posy));
+ctx.rotate((sat.girolnb-90)*gradrad); // (-sat.girolnb+0)*gradrad); // -Math.PI / 4);  sat.girolnb*3.14/180
+ctx.textAlign = 'left';
+      diff = 0;
+      if(sat.elevacion<66) diff = 3;
+      if(sat.elevacion>68) diff = -6;
+      if(sat.elevacion<62) diff = 0;
+// ctx.fillText(sat.girolnb+'° '+sat.nombre, 10+sat.offset*.5, 4+diff);
+ctx.fillText(sat.nombre, 10+sat.offset*0.5, 4); //+diff
+ctx.restore();
+
+    }
+}
+</script>
+
+
+
+
+
+
+
+<script>
+function graficaCinta(posx, posy, ancho, alto, arrSat) {
+var x=posx; // 10;
+var y=posy; // 500;
+var myCanvas = document.getElementById("myCanvas");
+var ctx = myCanvas.getContext("2d");
+
+      ctx.font = "20px Arial";
+      ctx.fillStyle = 'black';
+      ctx.textAlign = 'left'; // 'center'; // 'right'; 
+      ctx.fillText('CINTA DE ORIENTACION 360°', x, y-(alto/2)); 
+      ctx.fillText('PARA USAR EN TUBO VERTICAL', x, y-(alto/2-20)); 
+
+
+      ctx.font = "10px Arial";
+      ctx.fillStyle = 'black';
+      ctx.textAlign = 'left'; // 'center'; // 'right'; 
+      //ctx.fillText('Imprimir, cortar y pegar en tubo con antena orientada al Norte', x+ancho*2+40, y+alto/2+30); 
+      ctx.fillText('Imprimir, cortar y pegar en tubo vertical (en 90°) con orientacion al Norte o Sur', x, y-(alto/2-30)); 
+
+y = y+(alto-10);
+
+      //definimos el grosor de la línea
+      ctx.lineWidth = 1;
+
+      //definimos el color de la línea
+      ctx.strokeStyle = 'black';
+
+      //rectangulo exterior
+      ctx.strokeRect(x, y, ancho*2, alto);
+
+
+    //N=47*5;	// 47*5 cantidad asociada a la vuelta del tubo
+    //N=ancho/2;	// cantidad asociada a la vuelta del tubo
+    N = ancho;  // 180 grados del tubo segun plantilla
+
+      //comenzamos el camino
+      ctx.beginPath();
+      ctx.strokeStyle = sat.color;
+
+for(a=-90; a<=90; a+=5){
+  norte = a;
+  color = 'lightgray';
+  Y = alto;
+
+  if(a%10 == 0) { 
+    Y = alto+10; 
+    color = 'gray';
+  }
+
+  X = Math.round((norte+90)*N/180*100)/100;
+
+      ctx.strokeStyle = color;
+
+     resta = 0;
+     if(a%10 == 0) { resta=10 }
+
+      //punto inicio y trazo
+      ctx.moveTo(X+x, y-resta);
+      ctx.lineTo(X+x, y+Y-resta+5);
+
+      //punto inicio y trazo
+      ctx.moveTo(X*-1+x+N*2, y-resta);
+      ctx.lineTo(X*-1+x+N*2, y+Y-resta+5);
+
+     if(a%10 == 0) { 
+      // tipo letra y textos
+      ctx.font = "8px Arial";
+      ctx.fillStyle = 'black';
+      ctx.textAlign = "center";
+
+      ctx.fillText(a, X+x, y-resta-5);
+      ctx.fillText(a, X*-1+x+N*2, y-resta-5);
+     }
+
+     if(a == -90 || a == 180) { 
+      ctx.fillText('O', X+x, y+Y+10);
+      ctx.fillText('O', X*-1+x+N*2, y+Y+10);
+     }
+
+     if(a == 90) { 
+      ctx.fillText('E', X+x, y+Y+10);
+      ctx.fillText('E', X*-1+x+N*2, y+Y+10);
+     }
+
+}
+
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+
+	// FRONTAL
+    for(i=0; i<arrS.length; i++){
+      sat = arrS[i];
+
+      //comenzamos el camino
+      ctx.beginPath();
+      ctx.strokeStyle = sat.color;
+
+      //punto inicio y trazo
+      ctx.moveTo(sat.X+x, y);
+      ctx.lineTo(sat.X+x, y+10+sat.Y*0.5+alto);
+
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+      // tipo letra y textos
+      ctx.font = "10px Arial";
+      ctx.fillStyle = sat.color;
+
+ctx.save();
+ctx.translate(sat.X+x, y+sat.Y+alto+20);
+ctx.rotate((90)*gradrad);
+ctx.textAlign = 'left'; // 'center'; // 'right'; // 
+//ctx.fillText(sat.girolnb+'° '+sat.nombre, 1+sat.offset*.5, 4);
+ctx.fillText(sat.nombre, 1+sat.offset*0.5, 4); //+diff
+ctx.restore();
+
+
+    }
+
+
+
+	// INVERTIDO
+    for(i=0; i<arrS.length; i++){
+      sat = arrS[i];
+
+      //comenzamos el camino
+      ctx.beginPath();
+      ctx.strokeStyle = sat.color;
+
+      //punto inicio y trazo
+      ctx.moveTo(sat.X*-1+x+N*2, y);
+      ctx.lineTo(sat.X*-1+x+N*2, y+10+sat.Y*0.5+alto);
+
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+      // tipo letra y textos
+      ctx.font = "10px Arial";
+      ctx.fillStyle = sat.color;
+
+ctx.save();
+ctx.translate(sat.X*-1+x+N*2, y+sat.Y+alto+20);
+ctx.rotate((90)*gradrad);
+ctx.textAlign = 'left'; // 'center'; // 'right'; // 
+//ctx.fillText(sat.girolnb+'° '+sat.nombre, 1+sat.offset*.5, 4);
+ctx.fillText(sat.nombre, 1+sat.offset*0.5, 4); //+diff
+ctx.restore();
+
+    }
+}
+</script>
+
+
+
+
+
+
+<script>
+function graficaPlanilla(x, y, ancho=800, alto=50) {
+
+var myCanvas = document.getElementById("myCanvas");
+var ctx = myCanvas.getContext("2d");
+
+      ctx.font = "15px Arial";
+      ctx.fillStyle = 'black';
+      ctx.textAlign = 'left'; // 'center'; // 'right'; 
+      ctx.fillText('PLANTILLA DE CINTA ORIENTACION', x, y-(alto/2-20)); 
+
+      //definimos el grosor de la línea
+      ctx.lineWidth = 1;
+
+      //definimos el color de la línea
+      ctx.strokeStyle = 'black';
+
+      //rectangulo exterior
+      ctx.strokeRect(x, y, ancho, alto);
+
+      //comenzamos el camino
+      ctx.beginPath();
+
+    for(xi=x; xi<=x+ancho; xi+=5 ){
+      //punto inicio
+      ctx.moveTo(xi,y);
+      ctx.lineTo(xi,y+alto);
+      cada10=0;
+      if((xi-x)%10!=0) cada10=10;
+      if((xi-x)%50) ctx.lineTo(xi,y+alto+10+cada10);
+      ctx.font = "10px Arial";
+      ctx.fillStyle = 'black';
+      ctx.textAlign = 'center'; // 'right'; 'left'; // 
+      //ctx.fillText(((xi-x)/5)%10, xi, y+alto+30); 
+      if((xi-x)%50) ctx.fillText(((xi-x)/5)%10, xi, y+alto+30); 
+      if( (xi-x)%50==0 ) ctx.fillText(((xi-x)/5), xi, y+alto+39); 
+    }
+      //figura cerrada
+      //ctx.closePath();
+
+      //pintamos el contorno del camino
+      ctx.stroke();
+
+      ctx.font = "10px Arial";
+      ctx.fillStyle = 'black';
+      ctx.textAlign = 'left'; // 'center'; // 'right'; 
+      ctx.fillText('Imprimir plantilla, medir 180° del tubo de la antena, usar ese numero para imprimir la cinta que calce con tu antena', x, y+alto+50); 
+}
+</script>
+
+<script>
+function cargarSatelites() {
+  // INICIALIZAR LISTADO
+ arrS = [];
+
+  // CARGAR LISTADO
+ ul = document.getElementById('sats');
+ for(i=0; i<ul.childElementCount ;i++){
+  nameS = ul.children.item(i).innerText;
+  longS = ul.children.item(i).getAttribute('long');
+  colorS = ul.children.item(i).getAttribute('color');
+  offsetS = ul.children.item(i).getAttribute('offset');
+  arrS.push(new Sat(i, longS, nameS, colorS, offsetS) );
+ }
+}
+
+function calcularApuntamiento() {
+  // CALULAR APUNTAMIENTO
+  for(i=0; i<arrS.length; i++){
+    arrS[i].dishpointer( dishpoint(lat, long, arrS[i].long) ); //  eslat, eslong, satlong
+  }
+}
+</script>
+
+
+
+<script>
+function calcGraph() {
+// CARGAR PARAMETROS
+// var lat = -18.45, long = -70.29;
+// var lineas = 47;  // la cantidad de lineas para los 180 grados
+lat = frm.lat.value;
+long = frm.long.value;
+lineas = frm.lines.value;
+
+var myCanvas = document.getElementById("myCanvas");
+var ctx = myCanvas.getContext("2d");
+myCanvas.width = 550; // screen.width; // 900
+myCanvas.height = 1160; // screen.height; // 800
+
+      //borramos el contenido del canvas
+      ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+
+cargarSatelites();
+
+// AGREGAR EL NORTE
+arrS.push( new Sat(i, long, 'NORTE', 'black', 0) );
+
+calcularApuntamiento();
+
+graficaAzimut(200, 250, 120, 140, arrS);
+graficaElevacion(200, 500, 120, 140, arrS);
+graficaGiro(200, 750, 120, 140, arrS);
+graficaCinta(10, 830, lineas*5, 50, arrS);
+graficaPlanilla(10, 1050, 500, 50);
+
+arrS.pop();
+
+}
+</script>
+
+
+
+<script>
+var arrS= [0];
+
+class Sat {
+  constructor(id, longitud, nombre='', color='black', offset=0) {
+    this.id = id;
+    this.long = longitud;
+    this.lat = 0; // los geo estacionarios estan en el ecuador por lo que es lat 0
+    this.nombre = nombre;
+    this.color = color;
+    this.offset = offset;
+    this.magnorte = 0;  // norte magnetico calculado
+    this.norte = 0;  // referencia con respecto al norte calculado
+    this.azimut = 0;
+    this.elevacion = 0;
+    this.girolnb = 0;
+    this.X = 0; //(norte+90)*N/180;
+    this.Y = 1; //Y;
+  }
+
+  dishpointer(pointer) {
+    let N=lineas*5; //47*5;  // 180 grados del tubo segun la plantilla, es por 5 ya que la plantilla es de 5 en 5
+    this.azimut = Math.round(pointer[0]*100)/100; // azimut
+    this.elevacion = Math.round(pointer[1]*100)/100; // elev
+    this.girolnb = -1*Math.round(pointer[2]*100)/100; // giro
+    this.norte = this.azimut - ((this.azimut>270) ? 360: 0);
+    this.X = Math.round((this.norte+90)*N/180*100)/100;
+    this.Y = parseFloat(this.offset); //Y;
+  }
+}
+
+calcGraph();
+</script>
+
+
+</body>
+</html>
